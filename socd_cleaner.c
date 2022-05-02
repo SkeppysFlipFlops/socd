@@ -161,16 +161,38 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     
     INPUT input;
     int key = kbInput->vkCode;
-    if(key == DISABLE_BIND){
-        if(wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN)
+    if(key == DISABLE_BIND) {
+        if(wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) // on disable, press keys as they should be
         {
             disableKeyPressed = IS_DOWN;
+            for(int i = 0; i < 4; i++){
+                INPUT si;
+                si.type = INPUT_KEYBOARD;
+                if(real[i] != virtual[i]) {
+                    si.ki = (KEYBDINPUT){CUSTOM_BINDS[i], 0, KEYEVENTF_KEYUP, 0, 0};
+                    if(real[i] == IS_DOWN) {
+                        si.ki.dwFlags = 0;
+                    }
+                    SendInput(1, &si, sizeof(INPUT));
+                }
+            }
         }
-        else if(wParam == WM_KEYUP || wParam == WM_SYSKEYUP)
+        else if(wParam == WM_KEYUP || wParam == WM_SYSKEYUP)// on enable, press keys as they should be
         {
             disableKeyPressed = IS_UP;
+            for(int i = 0; i < 4; i++){
+                INPUT si;
+                si.type = INPUT_KEYBOARD;
+                if(real[i] != virtual[i]) {
+                    si.ki = (KEYBDINPUT){CUSTOM_BINDS[i], 0, KEYEVENTF_KEYUP, 0, 0};
+                    if(virtual[i] == IS_DOWN) {
+                        si.ki.dwFlags = 0;
+                    }
+                    SendInput(1, &si, sizeof(INPUT));
+                }
+            }
         }
-        return CallNextHookEx(NULL, nCode, wParam, lParam);
+    return CallNextHookEx(NULL, nCode, wParam, lParam);
     }
     int opposing = find_opposing_key(key);
     if (opposing < 0) {
@@ -184,10 +206,12 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
     if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
         real[index] = IS_DOWN;
         virtual[index] = IS_DOWN;
-        if (real[opposing_index] == IS_DOWN && virtual[opposing_index] == IS_DOWN && disableKeyPressed == IS_UP) {
-            input.type = INPUT_KEYBOARD;
-            input.ki = (KEYBDINPUT){opposing, 0, KEYEVENTF_KEYUP, 0, 0};
-            SendInput(1, &input, sizeof(INPUT));
+        if (real[opposing_index] == IS_DOWN && virtual[opposing_index] == IS_DOWN) {
+            if(disableKeyPressed == IS_UP){
+                input.type = INPUT_KEYBOARD;
+                input.ki = (KEYBDINPUT){opposing, 0, KEYEVENTF_KEYUP, 0, 0};
+                SendInput(1, &input, sizeof(INPUT));
+            }
             virtual[opposing_index] = IS_UP;
         }
     }
@@ -195,9 +219,11 @@ LRESULT CALLBACK LowLevelKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
         real[index] = IS_UP;
         virtual[index] = IS_UP;
         if (real[opposing_index] == IS_DOWN && disableKeyPressed == IS_UP) {
-            input.type = INPUT_KEYBOARD;
-            input.ki = (KEYBDINPUT){opposing, 0, 0, 0, 0};
-            SendInput(1, &input, sizeof(INPUT));
+            if(disableKeyPressed == IS_UP) {
+                input.type = INPUT_KEYBOARD;
+                input.ki = (KEYBDINPUT){opposing, 0, 0, 0, 0};
+                SendInput(1, &input, sizeof(INPUT));
+            }
             virtual[opposing_index] = IS_DOWN;
         }
     }
